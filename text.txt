@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Fish Reef Run</title>
+<style>
+    body {
+        margin: 0;
+        overflow: hidden;
+        background: #3bb2e6;
+    }
+    canvas {
+        display: block;
+        margin: 0 auto;
+        background: linear-gradient(#5fd0ff, #0066cc);
+    }
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="400" height="600"></canvas>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+let fish;
+let corals;
+let bubbles;
+let frame;
+let score;
+let gameOver;
+
+function resetGame() {
+    fish = {
+        x: 100,
+        y: 300,
+        gravity: 0.4,
+        lift: -5.5, // LOWER jump
+        velocity: 0
+    };
+
+    corals = [];
+    bubbles = [];
+    frame = 0;
+    score = 0;
+    gameOver = false;
+}
+
+resetGame();
+
+function drawFish() {
+    ctx.fillStyle = "orange";
+    ctx.beginPath();
+    ctx.ellipse(fish.x, fish.y, 22, 14, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "darkorange";
+    ctx.beginPath();
+    ctx.moveTo(fish.x - 22, fish.y);
+    ctx.lineTo(fish.x - 38, fish.y - 12);
+    ctx.lineTo(fish.x - 38, fish.y + 12);
+    ctx.fill();
+
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    ctx.arc(fish.x + 10, fish.y - 4, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "black";
+    ctx.beginPath();
+    ctx.arc(fish.x + 12, fish.y - 4, 2, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+function drawSeaweed() {
+    ctx.fillStyle = "green";
+    for (let i = 0; i < canvas.width; i += 30) {
+        ctx.beginPath();
+        ctx.moveTo(i, canvas.height);
+        ctx.quadraticCurveTo(i + 10, canvas.height - 40, i + 20, canvas.height);
+        ctx.fill();
+    }
+}
+
+function drawCorals() {
+    corals.forEach(coral => {
+        ctx.fillStyle = "#8e44ad";
+        ctx.fillRect(coral.x, 0, coral.width, coral.top);
+        ctx.fillRect(coral.x, coral.bottom, coral.width, canvas.height - coral.bottom);
+
+        ctx.fillStyle = "#a569bd";
+        for (let i = 0; i < 3; i++) {
+            ctx.fillRect(coral.x + i*15, coral.top - 20, 10, 20);
+            ctx.fillRect(coral.x + i*15, coral.bottom, 10, 20);
+        }
+    });
+}
+
+function drawBubbles() {
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    bubbles.forEach(b => {
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
+        ctx.fill();
+    });
+}
+
+function update() {
+    if (gameOver) return;
+
+    fish.velocity += fish.gravity;
+    fish.y += fish.velocity;
+
+    if (fish.y > canvas.height - 20 || fish.y < 0) {
+        endGame();
+    }
+
+    if (frame % 120 === 0) {
+        let gap = 210;
+        let top = Math.random() * (canvas.height - gap - 100) + 50;
+
+        corals.push({
+            x: canvas.width,
+            width: 60,
+            top: top,
+            bottom: top + gap,
+            passed: false   // scoring flag
+        });
+    }
+
+    corals.forEach(coral => {
+        coral.x -= 1.5;
+
+        // Collision
+        if (
+            fish.x + 22 > coral.x &&
+            fish.x - 22 < coral.x + coral.width &&
+            (fish.y - 14 < coral.top || fish.y + 14 > coral.bottom)
+        ) {
+            endGame();
+        }
+
+        // SCORE when fully passed
+        if (!coral.passed && fish.x > coral.x + coral.width) {
+            score++;
+            coral.passed = true;
+        }
+    });
+
+    // Bubbles
+    if (Math.random() < 0.05) {
+        bubbles.push({
+            x: Math.random() * canvas.width,
+            y: canvas.height,
+            size: Math.random() * 5 + 2
+        });
+    }
+
+    bubbles.forEach(b => b.y -= 1);
+    bubbles = bubbles.filter(b => b.y > 0);
+
+    frame++;
+}
+
+function endGame() {
+    gameOver = true;
+    setTimeout(resetGame, 2000);
+}
+
+function drawScore() {
+    ctx.fillStyle = "white";
+    ctx.font = "26px Arial";
+    ctx.fillText("Score: " + score, 20, 40);
+}
+
+function gameLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    update();
+    drawFish();
+    drawCorals();
+    drawSeaweed();
+    drawBubbles();
+    drawScore();
+    requestAnimationFrame(gameLoop);
+}
+
+document.addEventListener("keydown", e => {
+    if (e.code === "Space") fish.velocity = fish.lift;
+});
+
+document.addEventListener("touchstart", () => {
+    fish.velocity = fish.lift;
+});
+
+gameLoop();
+</script>
+
+</body>
+</html>
